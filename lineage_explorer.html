@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Data Lineage Explorer — Home Lending Pipeline</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #060a14;
+  --surface: #0c1422;
+  --surface2: #111c30;
+  --border: #1a2842;
+  --border2: #243550;
+  --text: #a8c0d8;
+  --text-dim: #485e78;
+  --text-bright: #ddeeff;
+  --source: #f97316;
+  --staging: #3b82f6;
+  --enrichment: #8b5cf6;
+  --integration: #06b6d4;
+  --aggregation: #10b981;
+  --scoring: #f59e0b;
+  --decision: #ef4444;
+  --compliance: #ec4899;
+  --reporting: #14b8a6;
+  --mart: #a855f7;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;height:100vh;display:flex;flex-direction:column;overflow:hidden;user-select:none;}
+
+/* HEADER */
+header{display:flex;align-items:center;gap:12px;padding:0 16px;height:50px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;z-index:200;}
+.logo{display:flex;align-items:center;gap:9px;font-family:'Syne',sans-serif;font-weight:800;font-size:15px;color:var(--text-bright);letter-spacing:-0.3px;white-space:nowrap;}
+.logo-icon{width:26px;height:26px;background:linear-gradient(135deg,#3b82f6 0%,#8b5cf6 100%);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}
+.h-sep{width:1px;height:22px;background:var(--border2);}
+.h-tag{font-size:10px;color:var(--text-dim);letter-spacing:0.5px;white-space:nowrap;}
+.search-wrap{display:flex;align-items:center;gap:7px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:5px 10px;margin-left:auto;}
+.search-wrap input{background:none;border:none;outline:none;color:var(--text-bright);font-family:inherit;font-size:11px;width:180px;}
+.search-wrap input::placeholder{color:var(--text-dim);}
+.search-icon{color:var(--text-dim);font-size:12px;}
+.hbtn{display:flex;align-items:center;gap:5px;padding:4px 9px;background:var(--surface2);border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:inherit;font-size:10px;cursor:pointer;transition:all .15s;white-space:nowrap;}
+.hbtn:hover{background:var(--border2);color:var(--text-bright);}
+.hbtn.active{background:#1a3060;border-color:#3b82f6;color:#93c5fd;}
+.zoom-pct{font-size:10px;color:var(--text-dim);min-width:38px;text-align:center;font-variant-numeric:tabular-nums;}
+
+/* MAIN */
+.main{display:flex;flex:1;overflow:hidden;position:relative;}
+
+/* LEFT PANEL */
+.left-panel{width:190px;background:var(--surface);border-right:1px solid var(--border);flex-shrink:0;display:flex;flex-direction:column;overflow:hidden;transition:width .2s ease;}
+.left-panel.collapsed{width:0;border:none;}
+.panel-hd{padding:9px 13px;font-family:'Syne',sans-serif;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);border-bottom:1px solid var(--border);flex-shrink:0;}
+.tbl-list{overflow-y:auto;flex:1;padding:6px 0;}
+.tbl-list::-webkit-scrollbar{width:3px;}
+.tbl-list::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+.layer-grp{margin-bottom:2px;}
+.layer-lbl{padding:5px 13px 3px;font-size:8.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);font-weight:600;}
+.tbl-item{display:flex;align-items:center;gap:7px;padding:4px 13px;font-size:9.5px;cursor:pointer;color:var(--text);transition:background .1s;white-space:nowrap;overflow:hidden;}
+.tbl-item:hover{background:var(--surface2);}
+.tbl-item.active{background:#1a3060;color:#93c5fd;}
+.tbl-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+
+/* CANVAS */
+.canvas-area{flex:1;overflow:hidden;position:relative;cursor:grab;background:var(--bg);}
+.canvas-area::before{content:'';position:absolute;inset:0;background-image:radial-gradient(circle at 1px 1px,rgba(255,255,255,0.04) 1px,transparent 0);background-size:36px 36px;pointer-events:none;}
+.canvas-area.grabbing{cursor:grabbing;}
+.canvas{position:absolute;transform-origin:0 0;width:5400px;height:1900px;}
+.svg-over{position:absolute;top:0;left:0;width:5400px;height:1900px;pointer-events:none;overflow:visible;}
+
+/* TABLE NODES */
+.t-node{position:absolute;width:232px;background:var(--surface);border:1.5px solid var(--border2);border-radius:9px;overflow:hidden;transition:box-shadow .2s,border-color .2s,opacity .2s;cursor:default;}
+.t-node:hover{border-color:rgba(255,255,255,0.18);box-shadow:0 0 0 1px rgba(255,255,255,0.04),0 8px 28px rgba(0,0,0,.5);}
+.t-node.selected{border-color:#3b82f6 !important;box-shadow:0 0 0 2px rgba(59,130,246,.25),0 8px 28px rgba(0,0,0,.5);}
+.t-node.highlighted{border-color:rgba(255,255,255,0.3);}
+.t-node.dimmed{opacity:.18;}
+
+.n-hd{padding:0 10px;height:46px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border);cursor:pointer;}
+.n-icon{width:22px;height:22px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;}
+.n-name{font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:600;color:var(--text-bright);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.2;}
+.n-cnt{font-size:8px;color:var(--text-dim);border:1px solid var(--border);border-radius:3px;padding:1px 4px;flex-shrink:0;}
+
+.col-row{display:flex;align-items:center;height:30px;padding:0 6px;border-bottom:1px solid rgba(255,255,255,.025);position:relative;transition:background .1s;}
+.col-row:last-child{border-bottom:none;}
+.col-row:hover{background:rgba(255,255,255,.03);}
+.col-row.col-hl{background:rgba(59,130,246,.15);}
+.col-row.col-from-hl{background:rgba(249,115,22,.12);}
+
+.port{position:absolute;width:9px;height:9px;border-radius:50%;background:var(--border2);border:2px solid var(--surface);transition:background .15s,transform .15s;cursor:crosshair;z-index:10;}
+.port-l{left:-4.5px;}
+.port-r{right:-4.5px;}
+.port.p-active{background:#3b82f6;transform:scale(1.4);}
+.port.p-src{background:#f97316;transform:scale(1.3);}
+
+.col-name{font-size:9.5px;color:var(--text);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:0 12px;}
+.col-type{font-size:8px;color:var(--text-dim);flex-shrink:0;max-width:70px;overflow:hidden;text-overflow:ellipsis;}
+.col-derived{font-size:9px;color:#f59e0b;margin-right:4px;flex-shrink:0;}
+
+/* LEVEL LABELS */
+.lvl-label{position:absolute;top:20px;font-family:'Syne',sans-serif;font-size:8.5px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);text-align:center;pointer-events:none;}
+.lvl-line{position:absolute;top:0;bottom:0;width:1px;background:rgba(255,255,255,.035);pointer-events:none;}
+
+/* RIGHT PANEL */
+.right-panel{width:0;background:var(--surface);border-left:1px solid var(--border);flex-shrink:0;display:flex;flex-direction:column;overflow:hidden;transition:width .25s cubic-bezier(.4,0,.2,1);}
+.right-panel.open{width:272px;}
+.det-hd{padding:13px 15px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.det-title{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--text-bright);}
+.det-close{background:none;border:none;color:var(--text-dim);font-size:16px;cursor:pointer;line-height:1;}
+.det-close:hover{color:var(--text-bright);}
+.det-body{padding:15px;overflow-y:auto;flex:1;}
+.det-body::-webkit-scrollbar{width:3px;}
+.det-body::-webkit-scrollbar-thumb{background:var(--border2);}
+.det-sec{margin-bottom:18px;}
+.det-lbl{font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);margin-bottom:5px;font-weight:600;}
+.det-val{font-size:10.5px;color:var(--text-bright);line-height:1.5;word-break:break-word;}
+.tx-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:4px;font-size:9px;font-weight:700;margin-top:3px;letter-spacing:.5px;}
+.tx-code{background:var(--surface2);border:1px solid var(--border2);border-radius:6px;padding:9px 11px;font-size:9.5px;line-height:1.7;color:#93c5fd;word-break:break-all;margin-top:6px;}
+.col-chip{display:inline-flex;align-items:center;gap:5px;background:var(--surface2);border:1px solid var(--border2);border-radius:4px;padding:3px 8px;font-size:9px;margin-top:4px;}
+.arrow-chip{color:var(--text-dim);font-size:10px;margin:4px 0;}
+
+/* MINIMAP */
+.minimap{position:absolute;bottom:14px;right:14px;width:155px;height:78px;background:rgba(12,20,34,.92);border:1px solid var(--border2);border-radius:7px;overflow:hidden;backdrop-filter:blur(8px);z-index:100;}
+.minimap canvas{width:100%;height:100%;}
+.mm-viewport{position:absolute;border:1.5px solid rgba(59,130,246,.5);border-radius:2px;pointer-events:none;background:rgba(59,130,246,.06);}
+
+/* LEGEND */
+.legend{position:absolute;bottom:14px;left:14px;background:rgba(12,20,34,.92);border:1px solid var(--border2);border-radius:7px;padding:10px 13px;backdrop-filter:blur(8px);z-index:100;}
+.leg-title{font-family:'Syne',sans-serif;font-size:8px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);margin-bottom:7px;}
+.leg-items{display:flex;flex-direction:column;gap:3px;}
+.leg-row{display:flex;align-items:center;gap:6px;font-size:8.5px;color:var(--text-dim);}
+.leg-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.leg-line{width:18px;height:2.5px;border-radius:1px;flex-shrink:0;}
+.leg-sep{width:1px;height:45px;background:var(--border);margin:0 4px;}
+
+/* STATUS */
+.status-bar{display:flex;align-items:center;gap:14px;padding:0 14px;height:26px;background:var(--surface);border-top:1px solid var(--border);font-size:9px;color:var(--text-dim);flex-shrink:0;}
+.status-bar .s-item{display:flex;align-items:center;gap:5px;}
+.status-bar .s-sep{width:1px;height:12px;background:var(--border);}
+.status-hint{margin-left:auto;font-size:8.5px;color:var(--text-dim);}
+
+/* TOOLTIP */
+.tooltip{position:fixed;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;font-size:9.5px;color:var(--text-bright);pointer-events:none;opacity:0;transition:opacity .15s;z-index:999;max-width:280px;line-height:1.5;}
+.tooltip.show{opacity:1;}
+
+/* ANIMATIONS */
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.t-node{animation:fadeUp .4s ease both;}
+
+/* Edge SVG styles (applied via JS) */
+.edge-path{transition:opacity .2s,stroke-width .2s;}
+.edge-path.e-dim{opacity:.06;}
+.edge-path.e-hl{opacity:1;stroke-width:2.5px !important;}
+
+/* Search states */
+.t-node.srch-match{border-color:#f59e0b;}
+.t-node.srch-no{opacity:.12;}
+
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">⬡</div>
+    <span>LineageIQ</span>
+  </div>
+  <div class="h-sep"></div>
+  <div class="h-tag">HOME LENDING PIPELINE · 10-LEVEL LINEAGE</div>
+
+  <div class="search-wrap">
+    <span class="search-icon">⌕</span>
+    <input id="searchInput" type="text" placeholder="Search tables or columns…">
+  </div>
+
+  <button class="hbtn" id="btnPanels" title="Toggle sidebar">◧ Tables</button>
+  <div class="h-sep"></div>
+  <button class="hbtn" id="btnZoomOut" title="Zoom out">−</button>
+  <span class="zoom-pct" id="zoomPct">65%</span>
+  <button class="hbtn" id="btnZoomIn" title="Zoom in">+</button>
+  <button class="hbtn" id="btnFit" title="Fit to screen">⤢ Fit</button>
+  <div class="h-sep"></div>
+  <button class="hbtn active" id="btnTrace">⟵ Trace Path</button>
+  <button class="hbtn" id="btnReset">✕ Clear</button>
+</header>
+
+<div class="main">
+  <div class="left-panel" id="leftPanel">
+    <div class="panel-hd">Tables · Layers</div>
+    <div class="tbl-list" id="tblList"></div>
+  </div>
+
+  <div class="canvas-area" id="canvasArea">
+    <div class="canvas" id="canvas">
+      <svg class="svg-over" id="svgOver" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="arr" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+            <path d="M0,0 L6,3 L0,6 Z" fill="#2a4060"/>
+          </marker>
+          <marker id="arr-hl" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+            <path d="M0,0 L6,3 L0,6 Z" fill="#60a5fa"/>
+          </marker>
+          <filter id="glow"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        </defs>
+      </svg>
+      <!-- nodes injected here -->
+    </div>
+    <div class="minimap" id="minimap">
+      <canvas id="mmCanvas"></canvas>
+      <div class="mm-viewport" id="mmViewport"></div>
+    </div>
+    <div class="legend" id="legend">
+      <div class="leg-title">Transformation Types</div>
+      <div class="leg-items" id="legItems"></div>
+    </div>
+  </div>
+
+  <div class="right-panel" id="rightPanel">
+    <div class="det-hd">
+      <span class="det-title" id="detTitle">Details</span>
+      <button class="det-close" id="detClose">×</button>
+    </div>
+    <div class="det-body" id="detBody"></div>
+  </div>
+</div>
+
+<div class="status-bar">
+  <span class="s-item" id="statTables">⊡ 13 tables</span>
+  <span class="s-sep"></span>
+  <span class="s-item" id="statEdges">⇒ 0 edges</span>
+  <span class="s-sep"></span>
+  <span class="s-item" id="statSelected">○ Nothing selected</span>
+  <span class="status-hint">Click table to trace · Hover edge for details · Scroll to zoom · Drag to pan</span>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════════════════════
+const TW = 232, NH = 46, CH = 30, LX = 468, SX = 60, SY = 60;
+
+const LAYER = {
+  source:      {label:'SOURCE',      color:'#f97316',icon:'◈',bg:'rgba(249,115,22,.15)'},
+  staging:     {label:'STAGING',     color:'#3b82f6',icon:'⬡',bg:'rgba(59,130,246,.15)'},
+  enrichment:  {label:'ENRICHMENT',  color:'#8b5cf6',icon:'◎',bg:'rgba(139,92,246,.15)'},
+  integration: {label:'INTEGRATION', color:'#06b6d4',icon:'⊕',bg:'rgba(6,182,212,.15)'},
+  aggregation: {label:'AGGREGATION', color:'#10b981',icon:'Σ',bg:'rgba(16,185,129,.15)'},
+  scoring:     {label:'SCORING',     color:'#f59e0b',icon:'★',bg:'rgba(245,158,11,.15)'},
+  decision:    {label:'DECISION',    color:'#ef4444',icon:'⊻',bg:'rgba(239,68,68,.15)'},
+  compliance:  {label:'COMPLIANCE',  color:'#ec4899',icon:'⊝',bg:'rgba(236,72,153,.15)'},
+  reporting:   {label:'REPORTING',   color:'#14b8a6',icon:'▤',bg:'rgba(20,184,166,.15)'},
+  mart:        {label:'DATA MART',   color:'#a855f7',icon:'◆',bg:'rgba(168,85,247,.15)'},
+};
+
+const TXCFG = {
+  passthrough: {label:'PASS-THRU', color:'#4b7096',symbol:'⇒'},
+  cast:        {label:'CAST',       color:'#60a5fa',symbol:'⟳'},
+  lookup:      {label:'LOOKUP',     color:'#fb923c',symbol:'◈'},
+  calculate:   {label:'CALCULATE',  color:'#fbbf24',symbol:'ƒ'},
+  aggregate:   {label:'AGGREGATE',  color:'#34d399',symbol:'Σ'},
+  mask:        {label:'MASK/PII',   color:'#f87171',symbol:'⊘'},
+  decode:      {label:'DECODE',     color:'#22d3ee',symbol:'⊛'},
+  expression:  {label:'EXPRESSION', color:'#c084fc',symbol:'λ'},
+};
+
+// ═══════════════════════════════════════════════════════
+// DATA — TABLES
+// ═══════════════════════════════════════════════════════
+const TABLES = [
+  {id:'SRC_LOAN_APP',label:'SRC_LOAN_APPLICATION',level:0,type:'source',y:60,
+   cols:[
+    {n:'LOAN_ID',       dt:'VARCHAR(20)'},
+    {n:'APPL_DT',       dt:'VARCHAR(10)'},
+    {n:'RAW_LOAN_AMT',  dt:'VARCHAR(20)'},
+    {n:'PROP_ZIP',      dt:'CHAR(9)'},
+    {n:'LOAN_TYPE_CD',  dt:'CHAR(2)'},
+    {n:'ORIG_SYS_CD',   dt:'CHAR(5)'},
+  ]},
+  {id:'SRC_BORROWER',label:'SRC_BORROWER_INFO',level:0,type:'source',y:360,
+   cols:[
+    {n:'BORR_ID',       dt:'VARCHAR(20)'},
+    {n:'SSN_RAW',       dt:'CHAR(11)'},
+    {n:'FULL_NAME_RAW', dt:'VARCHAR(80)'},
+    {n:'BORR_DOB',      dt:'VARCHAR(10)'},
+    {n:'ANN_INC_RAW',   dt:'VARCHAR(20)'},
+    {n:'PHONE_RAW',     dt:'VARCHAR(15)'},
+  ]},
+  {id:'STG_LOAN',label:'STG_LOAN_APPLICATION',level:1,type:'staging',y:60,
+   cols:[
+    {n:'LOAN_KEY',         dt:'NUMBER(10)'},
+    {n:'APPLICATION_DATE', dt:'DATE'},
+    {n:'LOAN_AMOUNT',      dt:'NUMBER(15,2)'},
+    {n:'PROPERTY_ZIP',     dt:'VARCHAR(9)'},
+    {n:'LOAN_TYPE',        dt:'VARCHAR(30)'},
+    {n:'SOURCE_SYSTEM',    dt:'CHAR(5)'},
+  ]},
+  {id:'STG_BORROWER',label:'STG_BORROWER',level:1,type:'staging',y:360,
+   cols:[
+    {n:'BORROWER_KEY',  dt:'NUMBER(10)'},
+    {n:'SSN_MASKED',    dt:'CHAR(11)'},
+    {n:'FULL_NAME',     dt:'VARCHAR(80)'},
+    {n:'DATE_OF_BIRTH', dt:'DATE'},
+    {n:'ANNUAL_INCOME', dt:'NUMBER(12,2)'},
+    {n:'AGE',           dt:'NUMBER(3)', derived:true},
+  ]},
+  {id:'ENR_LOAN',label:'ENR_LOAN_DETAILS',level:2,type:'enrichment',y:40,
+   cols:[
+    {n:'LOAN_KEY',     dt:'NUMBER(10)'},
+    {n:'LOAN_AMOUNT',  dt:'NUMBER(15,2)'},
+    {n:'STATE_CD',     dt:'CHAR(2)'},
+    {n:'COUNTY_CD',    dt:'CHAR(5)'},
+    {n:'MSA_CODE',     dt:'CHAR(5)'},
+    {n:'LTV_RATIO',    dt:'NUMBER(5,4)', derived:true},
+    {n:'LOAN_PURPOSE', dt:'VARCHAR(20)'},
+  ]},
+  {id:'ENR_CREDIT',label:'ENR_CREDIT_PROFILE',level:2,type:'enrichment',y:376,
+   cols:[
+    {n:'BORROWER_KEY',       dt:'NUMBER(10)'},
+    {n:'CREDIT_TIER',        dt:'CHAR(1)'},
+    {n:'DTI_RATIO',          dt:'NUMBER(5,4)', derived:true},
+    {n:'ANNUAL_INCOME',      dt:'NUMBER(12,2)'},
+    {n:'MONTHLY_OBLIGATION', dt:'NUMBER(10,2)', derived:true},
+    {n:'DISPOSABLE_INCOME',  dt:'NUMBER(12,2)', derived:true},
+  ]},
+  {id:'INT_RISK',label:'INT_LOAN_RISK_PROFILE',level:3,type:'integration',y:180,
+   cols:[
+    {n:'LOAN_KEY',     dt:'NUMBER(10)'},
+    {n:'BORROWER_KEY', dt:'NUMBER(10)'},
+    {n:'LOAN_AMOUNT',  dt:'NUMBER(15,2)'},
+    {n:'CREDIT_TIER',  dt:'CHAR(1)'},
+    {n:'LTV_RATIO',    dt:'NUMBER(5,4)'},
+    {n:'DTI_RATIO',    dt:'NUMBER(5,4)'},
+    {n:'RISK_BAND',    dt:'CHAR(1)', derived:true},
+  ]},
+  {id:'AGG_METRICS',label:'AGG_LOAN_METRICS',level:4,type:'aggregation',y:185,
+   cols:[
+    {n:'RISK_BAND',      dt:'CHAR(1)'},
+    {n:'LOAN_COUNT',     dt:'NUMBER(10)'},
+    {n:'TOTAL_LOAN_AMT', dt:'NUMBER(18,2)'},
+    {n:'AVG_LOAN_AMT',   dt:'NUMBER(15,2)'},
+    {n:'AVG_LTV',        dt:'NUMBER(5,4)'},
+    {n:'AVG_DTI',        dt:'NUMBER(5,4)'},
+  ]},
+  {id:'RISK_SCORE',label:'RISK_SCORE_MATRIX',level:5,type:'scoring',y:185,
+   cols:[
+    {n:'LOAN_KEY',             dt:'NUMBER(10)'},
+    {n:'CREDIT_SCORE',         dt:'NUMBER(5,2)'},
+    {n:'LTV_SCORE',            dt:'NUMBER(5,2)'},
+    {n:'DTI_SCORE',            dt:'NUMBER(5,2)'},
+    {n:'COMPOSITE_RISK_SCORE', dt:'NUMBER(5,2)', derived:true},
+    {n:'SCORE_DT',             dt:'DATE'},
+  ]},
+  {id:'UW_DECISION',label:'UNDERWRITING_DECISION',level:6,type:'decision',y:185,
+   cols:[
+    {n:'LOAN_KEY',         dt:'NUMBER(10)'},
+    {n:'DECISION_CD',      dt:'CHAR(1)'},
+    {n:'DECISION_DT',      dt:'DATE'},
+    {n:'APPROVED_AMT',     dt:'NUMBER(15,2)', derived:true},
+    {n:'CONDITIONS',       dt:'VARCHAR(500)', derived:true},
+    {n:'DENIAL_REASON_CD', dt:'CHAR(3)', derived:true},
+  ]},
+  {id:'COMPLIANCE',label:'COMPLIANCE_AUDIT_LOG',level:7,type:'compliance',y:185,
+   cols:[
+    {n:'LOAN_KEY',              dt:'NUMBER(10)'},
+    {n:'FAIR_LEND_SCORE',       dt:'NUMBER(5,2)', derived:true},
+    {n:'DENIAL_DISPARITY_FLAG', dt:'CHAR(1)', derived:true},
+    {n:'HMDA_ETHNICITY_CD',     dt:'CHAR(2)', derived:true},
+    {n:'AUDIT_DT',              dt:'DATE'},
+    {n:'REVIEW_STATUS',         dt:'VARCHAR(20)', derived:true},
+  ]},
+  {id:'RPT_PIPELINE',label:'RPT_LOAN_PIPELINE',level:8,type:'reporting',y:160,
+   cols:[
+    {n:'LOAN_KEY',         dt:'NUMBER(10)'},
+    {n:'APPLICATION_DATE', dt:'DATE'},
+    {n:'DECISION_CD',      dt:'CHAR(1)'},
+    {n:'LOAN_AMOUNT',      dt:'NUMBER(15,2)'},
+    {n:'CREDIT_TIER',      dt:'CHAR(1)'},
+    {n:'RISK_BAND',        dt:'CHAR(1)'},
+    {n:'PIPELINE_STATUS',  dt:'VARCHAR(20)', derived:true},
+  ]},
+  {id:'MART_EXEC',label:'MART_EXEC_DASHBOARD',level:9,type:'mart',y:200,
+   cols:[
+    {n:'SNAPSHOT_DT',       dt:'DATE'},
+    {n:'RISK_BAND',         dt:'CHAR(1)'},
+    {n:'APPROVAL_RATE',     dt:'NUMBER(5,4)', derived:true},
+    {n:'TOTAL_APPROVED_AMT',dt:'NUMBER(18,2)', derived:true},
+    {n:'AVG_RISK_SCORE',    dt:'NUMBER(5,2)', derived:true},
+  ]},
+];
+
+// ═══════════════════════════════════════════════════════
+// DATA — EDGES  {from, fc, to, tc, tx, type}
+// ═══════════════════════════════════════════════════════
+const EDGES = [
+  // SRC → STG_LOAN
+  {from:'SRC_LOAN_APP',fc:0,to:'STG_LOAN',tc:0,tx:"SEQUENCE.NEXTVAL (new surrogate key)",type:'expression'},
+  {from:'SRC_LOAN_APP',fc:1,to:'STG_LOAN',tc:1,tx:"TO_DATE(APPL_DT, 'YYYYMMDD')",type:'cast'},
+  {from:'SRC_LOAN_APP',fc:2,to:'STG_LOAN',tc:2,tx:"TO_NUMBER(TRIM(RAW_LOAN_AMT))",type:'cast'},
+  {from:'SRC_LOAN_APP',fc:3,to:'STG_LOAN',tc:3,tx:"TRIM(PROP_ZIP)",type:'expression'},
+  {from:'SRC_LOAN_APP',fc:4,to:'STG_LOAN',tc:4,tx:"DECODE(LOAN_TYPE_CD,'CV','CONVENTIONAL','FH','FHA','VA','VA LOAN',LOAN_TYPE_CD)",type:'decode'},
+  {from:'SRC_LOAN_APP',fc:5,to:'STG_LOAN',tc:5,tx:"DIRECT COPY",type:'passthrough'},
+  // SRC → STG_BORROWER
+  {from:'SRC_BORROWER',fc:0,to:'STG_BORROWER',tc:0,tx:"SEQUENCE.NEXTVAL",type:'expression'},
+  {from:'SRC_BORROWER',fc:1,to:'STG_BORROWER',tc:1,tx:"MASK_SSN(SSN_RAW) — replaces digits 1-5 with 'X'",type:'mask'},
+  {from:'SRC_BORROWER',fc:2,to:'STG_BORROWER',tc:2,tx:"INITCAP(TRIM(FULL_NAME_RAW))",type:'expression'},
+  {from:'SRC_BORROWER',fc:3,to:'STG_BORROWER',tc:3,tx:"TO_DATE(BORR_DOB,'YYYYMMDD')",type:'cast'},
+  {from:'SRC_BORROWER',fc:4,to:'STG_BORROWER',tc:4,tx:"TO_NUMBER(ANN_INC_RAW)",type:'cast'},
+  {from:'SRC_BORROWER',fc:3,to:'STG_BORROWER',tc:5,tx:"FLOOR((SYSDATE - TO_DATE(BORR_DOB,'YYYYMMDD')) / 365.25)",type:'calculate'},
+  // STG_LOAN → ENR_LOAN
+  {from:'STG_LOAN',fc:0,to:'ENR_LOAN',tc:0,tx:"DIRECT COPY",type:'passthrough'},
+  {from:'STG_LOAN',fc:2,to:'ENR_LOAN',tc:1,tx:"DIRECT COPY",type:'passthrough'},
+  {from:'STG_LOAN',fc:3,to:'ENR_LOAN',tc:2,tx:"ZIP_STATE_LKP.STATE_CD (ZIP code lookup table)",type:'lookup'},
+  {from:'STG_LOAN',fc:3,to:'ENR_LOAN',tc:3,tx:"ZIP_STATE_LKP.COUNTY_FIPS_CD",type:'lookup'},
+  {from:'STG_LOAN',fc:3,to:'ENR_LOAN',tc:4,tx:"ZIP_MSA_LKP.MSA_CODE",type:'lookup'},
+  {from:'STG_LOAN',fc:2,to:'ENR_LOAN',tc:5,tx:"LOAN_AMOUNT / APPRAISAL_VALUE_LKP.APPRAISED_VAL",type:'calculate'},
+  {from:'STG_LOAN',fc:4,to:'ENR_LOAN',tc:6,tx:"MAP_LOAN_PURPOSE(LOAN_TYPE) — CONV→PURCHASE/REFI",type:'decode'},
+  // STG_BORROWER → ENR_CREDIT
+  {from:'STG_BORROWER',fc:0,to:'ENR_CREDIT',tc:0,tx:"DIRECT COPY",type:'passthrough'},
+  {from:'STG_BORROWER',fc:4,to:'ENR_CREDIT',tc:1,tx:"CREDIT_TIER_LKP.TIER_CD (income bracket lookup)",type:'lookup'},
+  {from:'STG_BORROWER',fc:4,to:'ENR_CREDIT',tc:3,tx:"DIRECT COPY",type:'passthrough'},
+  {from:'STG_BORROWER',fc:4,to:'ENR_CREDIT',tc:4,tx:"MONTHLY_DEBT_CALC(BORROWER_KEY) — external credit bureau",type:'calculate'},
+  {from:'STG_BORROWER',fc:4,to:'ENR_CREDIT',tc:5,tx:"ANNUAL_INCOME - (MONTHLY_OBLIGATION * 12)",type:'calculate'},
+  {from:'STG_BORROWER',fc:4,to:'ENR_CREDIT',tc:2,tx:"MONTHLY_OBLIGATION / (ANNUAL_INCOME / 12)",type:'calculate'},
+  // ENR_LOAN + ENR_CREDIT → INT_RISK (JOIN)
+  {from:'ENR_LOAN',  fc:0,to:'INT_RISK',tc:0,tx:"DIRECT COPY",type:'passthrough'},
+  {from:'ENR_CREDIT',fc:0,to:'INT_RISK',tc:1,tx:"DIRECT COPY",type:'passthrough'},
+  {from:'ENR_LOAN',  fc:1,to:'INT_RISK',tc:2,tx:"DIRECT COPY",type:'passthrough'},
+  {from:'ENR_CREDIT',fc:1,to:'INT_RISK',tc:3,tx:"DIRECT COPY",type:'passthrough'},
+  {from:'ENR_LOAN',  fc:5,to:'INT_RISK',tc:4,tx:"DIRECT COPY",type:'passthrough'},
+  {from:'ENR_CREDIT',fc:2,to:'INT_RISK',tc:5,tx:"DIRECT COPY",type:'passthrough'},
+  {from:'ENR_CREDIT',fc:1,to:'INT_RISK',tc:6,tx:"ASSIGN_RISK_BAND(CREDIT_TIER, LTV_RATIO, DTI_RATIO) — rules table",type:'calculate'},
+  // INT_RISK → AGG_METRICS
+  {from:'INT_RISK',fc:6,to:'AGG_METRICS',tc:0,tx:"GROUP BY RISK_BAND",type:'aggregate'},
+  {from:'INT_RISK',fc:0,to:'AGG_METRICS',tc:1,tx:"COUNT(LOAN_KEY)",type:'aggregate'},
+  {from:'INT_RISK',fc:2,to:'AGG_METRICS',tc:2,tx:"SUM(LOAN_AMOUNT)",type:'aggregate'},
+  {from:'INT_RISK',fc:2,to:'AGG_METRICS',tc:3,tx:"AVG(LOAN_AMOUNT)",type:'aggregate'},
+  {from:'INT_RISK',fc:4,to:'AGG_METRICS',tc:4,tx:"AVG(LTV_RATIO)",type:'aggregate'},
+  {from:'INT_RISK',fc:5,to:'AGG_METRICS',tc:5,tx:"AVG(DTI_RATIO)",type:'aggregate'},
+  // INT_RISK → RISK_SCORE
+  {from:'INT_RISK',fc:0,to:'RISK_SCORE',tc:0,tx:"DIRECT COPY",type:'passthrough'},
+  {from:'INT_RISK',fc:3,to:'RISK_SCORE',tc:1,tx:"CREDIT_SCORE_MAP(CREDIT_TIER) — A→95, B→80, C→65, D→45",type:'calculate'},
+  {from:'INT_RISK',fc:4,to:'RISK_SCORE',tc:2,tx:"100 - (LTV_RATIO * 100) — lower LTV = higher score",type:'calculate'},
+  {from:'INT_RISK',fc:5,to:'RISK_SCORE',tc:3,tx:"100 - (DTI_RATIO * 100) — lower DTI = higher score",type:'calculate'},
+  {from:'RISK_SCORE',fc:1,to:'RISK_SCORE',tc:4,tx:"(CREDIT_SCORE*0.50) + (LTV_SCORE*0.30) + (DTI_SCORE*0.20)",type:'calculate'},
+  // RISK_SCORE → UW_DECISION
+  {from:'RISK_SCORE',fc:0,to:'UW_DECISION',tc:0,tx:"DIRECT COPY",type:'passthrough'},
+  {from:'RISK_SCORE',fc:4,to:'UW_DECISION',tc:1,tx:"DECODE(CASE WHEN COMPOSITE>=75 THEN 'A' WHEN >=55 THEN 'S' ELSE 'D')",type:'calculate'},
+  {from:'RISK_SCORE',fc:4,to:'UW_DECISION',tc:3,tx:"CASE WHEN DECISION='A' THEN MIN(LOAN_AMT, CONFORMING_LIMIT) ELSE 0",type:'calculate'},
+  {from:'RISK_SCORE',fc:4,to:'UW_DECISION',tc:4,tx:"CONDITIONS_MAP(COMPOSITE_RISK_SCORE) — lookup conditions table",type:'decode'},
+  {from:'RISK_SCORE',fc:4,to:'UW_DECISION',tc:5,tx:"DENIAL_CODE_MAP(COMPOSITE_RISK_SCORE) — HMDA denial reason codes",type:'decode'},
+  // UW_DECISION + INT_RISK → COMPLIANCE
+  {from:'UW_DECISION',fc:0,to:'COMPLIANCE',tc:0,tx:"DIRECT COPY",type:'passthrough'},
+  {from:'UW_DECISION',fc:1,to:'COMPLIANCE',tc:1,tx:"FAIR_LEND_SCORE(DECISION_CD, CREDIT_TIER, LTV, DTI) — regression model",type:'calculate'},
+  {from:'INT_RISK',   fc:3,to:'COMPLIANCE',tc:1,tx:"FAIR_LEND_SCORE — CREDIT_TIER input (cross-level join)",type:'calculate'},
+  {from:'UW_DECISION',fc:1,to:'COMPLIANCE',tc:2,tx:"CASE WHEN FAIR_LEND_SCORE < THRESHOLD THEN 'Y' ELSE 'N'",type:'calculate'},
+  {from:'UW_DECISION',fc:1,to:'COMPLIANCE',tc:3,tx:"HMDA_ETHNICITY_LKP(DECISION_CD, LOAN_KEY) — HMDA reporting lookup",type:'lookup'},
+  {from:'UW_DECISION',fc:2,to:'COMPLIANCE',tc:4,tx:"DIRECT COPY",type:'passthrough'},
+  {from:'COMPLIANCE', fc:2,to:'COMPLIANCE',tc:5,tx:"DECODE(DENIAL_DISPARITY_FLAG,'Y','ESCALATE','PASS')",type:'decode'},
+  // COMPLIANCE + misc → RPT_PIPELINE
+  {from:'UW_DECISION',fc:0,to:'RPT_PIPELINE',tc:0,tx:"DIRECT COPY",type:'passthrough'},
+  {from:'STG_LOAN',   fc:1,to:'RPT_PIPELINE',tc:1,tx:"DIRECT COPY (source-to-report passthrough)",type:'passthrough'},
+  {from:'UW_DECISION',fc:1,to:'RPT_PIPELINE',tc:2,tx:"DIRECT COPY",type:'passthrough'},
+  {from:'ENR_LOAN',   fc:1,to:'RPT_PIPELINE',tc:3,tx:"DIRECT COPY (enriched amount)",type:'passthrough'},
+  {from:'INT_RISK',   fc:3,to:'RPT_PIPELINE',tc:4,tx:"DIRECT COPY (integrated credit tier)",type:'passthrough'},
+  {from:'INT_RISK',   fc:6,to:'RPT_PIPELINE',tc:5,tx:"DIRECT COPY (risk band from integration layer)",type:'passthrough'},
+  {from:'UW_DECISION',fc:1,to:'RPT_PIPELINE',tc:6,tx:"PIPELINE_STATUS(DECISION_CD) — maps to APPROVED/SUSPENDED/DENIED",type:'decode'},
+  // RPT_PIPELINE → MART_EXEC
+  {from:'RPT_PIPELINE',fc:1,to:'MART_EXEC',tc:0,tx:"TRUNC(APPLICATION_DATE,'MM') — monthly snapshot grain",type:'expression'},
+  {from:'RPT_PIPELINE',fc:5,to:'MART_EXEC',tc:1,tx:"GROUP BY RISK_BAND",type:'aggregate'},
+  {from:'RPT_PIPELINE',fc:2,to:'MART_EXEC',tc:2,tx:"SUM(CASE WHEN DECISION_CD='A' THEN 1 ELSE 0 END) / COUNT(*)",type:'aggregate'},
+  {from:'RPT_PIPELINE',fc:3,to:'MART_EXEC',tc:3,tx:"SUM(LOAN_AMOUNT) WHERE DECISION_CD='A'",type:'aggregate'},
+  {from:'RISK_SCORE',  fc:4,to:'MART_EXEC',tc:4,tx:"AVG(COMPOSITE_RISK_SCORE) — cross-layer join",type:'aggregate'},
+];
+
+// ═══════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════
+const tblMap = {};
+TABLES.forEach(t => { t.x = t.level * LX + SX; tblMap[t.id] = t; });
+
+function nodeH(t){ return NH + t.cols.length * CH; }
+
+function portPos(tId, ci, side){
+  const t = tblMap[tId];
+  return { x: t.x + (side==='r' ? TW : 0), y: t.y + NH + ci * CH + CH/2 };
+}
+
+function tableCenter(tId){
+  const t = tblMap[tId];
+  return { x: t.x + TW/2, y: t.y + nodeH(t)/2 };
+}
+
+// ═══════════════════════════════════════════════════════
+// BUILD GRAPH for tracing
+// ═══════════════════════════════════════════════════════
+const downMap = {}; // downMap[tid][ci] = [{to,tc,edgeIdx}]
+const upMap   = {}; // upMap[tid][ci]   = [{from,fc,edgeIdx}]
+TABLES.forEach(t => { downMap[t.id] = {}; upMap[t.id] = {}; });
+
+EDGES.forEach((e, i) => {
+  if(!downMap[e.from][e.fc]) downMap[e.from][e.fc]=[];
+  if(!upMap[e.to][e.tc])     upMap[e.to][e.tc]=[];
+  // skip self-refs for maps
+  if(e.from !== e.to){
+    downMap[e.from][e.fc].push({to:e.to,tc:e.tc,ei:i});
+    upMap[e.to][e.tc].push({from:e.from,fc:e.fc,ei:i});
+  }
+});
+
+function traceAll(tid, ci){
+  const reachTables = new Set(), reachCols = new Set(), reachEdges = new Set();
+  const q = [{tid,ci}];
+  const visited = new Set();
+  while(q.length){
+    const {tid:ct,ci:cc} = q.shift();
+    const key = ct+'|'+cc;
+    if(visited.has(key)) continue;
+    visited.add(key);
+    reachTables.add(ct);
+    reachCols.add(key);
+    // upstream
+    (upMap[ct]?.[cc]||[]).forEach(u => {
+      reachEdges.add(u.ei);
+      if(!visited.has(u.from+'|'+u.fc)) q.push({tid:u.from,ci:u.fc});
+    });
+    // downstream
+    (downMap[ct]?.[cc]||[]).forEach(d => {
+      reachEdges.add(d.ei);
+      if(!visited.has(d.to+'|'+d.tc)) q.push({tid:d.to,ci:d.tc});
+    });
+  }
+  return {reachTables, reachCols, reachEdges};
+}
+
+// ═══════════════════════════════════════════════════════
+// RENDER: LEFT PANEL
+// ═══════════════════════════════════════════════════════
+function buildLeftPanel(){
+  const layers = {};
+  TABLES.forEach(t => {
+    if(!layers[t.type]) layers[t.type]=[];
+    layers[t.type].push(t);
+  });
+  const list = document.getElementById('tblList');
+  Object.entries(LAYER).forEach(([lk, lv]) => {
+    if(!layers[lk]) return;
+    const grp = document.createElement('div');
+    grp.className='layer-grp';
+    grp.innerHTML=`<div class="layer-lbl" style="color:${lv.color}">${lv.icon} ${lv.label}</div>`;
+    layers[lk].forEach(t => {
+      const item = document.createElement('div');
+      item.className='tbl-item';
+      item.dataset.tid=t.id;
+      item.innerHTML=`<span class="tbl-dot" style="background:${lv.color}"></span>${t.label}`;
+      item.addEventListener('click',()=>{ panToTable(t.id); selectTable(t.id); });
+      grp.appendChild(item);
+    });
+    list.appendChild(grp);
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// RENDER: TABLE NODES
+// ═══════════════════════════════════════════════════════
+function buildNodes(){
+  const canvas = document.getElementById('canvas');
+  TABLES.forEach((t, ti) => {
+    const lv = LAYER[t.type];
+    const node = document.createElement('div');
+    node.className='t-node';
+    node.id='node-'+t.id;
+    node.style.cssText=`left:${t.x}px;top:${t.y}px;animation-delay:${ti*0.04}s;border-top:2.5px solid ${lv.color}`;
+
+    // header
+    const hd = document.createElement('div');
+    hd.className='n-hd';
+    hd.innerHTML=`
+      <div class="n-icon" style="background:${lv.bg};color:${lv.color}">${lv.icon}</div>
+      <div class="n-name" title="${t.label}">${t.label}</div>
+      <div class="n-cnt">${t.cols.length}</div>`;
+    hd.addEventListener('click',()=>selectTable(t.id));
+    node.appendChild(hd);
+
+    // columns
+    t.cols.forEach((col,ci) => {
+      const row = document.createElement('div');
+      row.className='col-row';
+      row.id=`col-${t.id}-${ci}`;
+      row.innerHTML=`
+        <div class="port port-l" id="pl-${t.id}-${ci}"></div>
+        ${col.derived?`<span class="col-derived" title="Derived column">ƒ</span>`:''}
+        <span class="col-name" title="${col.n}">${col.n}</span>
+        <span class="col-type">${col.dt}</span>
+        <div class="port port-r" id="pr-${t.id}-${ci}"></div>`;
+      row.addEventListener('click',()=>selectColumn(t.id,ci));
+      node.appendChild(row);
+    });
+
+    canvas.appendChild(node);
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// RENDER: SVG EDGES
+// ═══════════════════════════════════════════════════════
+function buildEdges(){
+  const svg = document.getElementById('svgOver');
+  const edgeGroup = document.createElementNS('http://www.w3.org/2000/svg','g');
+  edgeGroup.id='edgeGroup';
+  svg.appendChild(edgeGroup);
+
+  EDGES.forEach((e, i) => {
+    if(e.from===e.to) return; // skip self-refs
+    const fp = portPos(e.from, e.fc, 'r');
+    const tp = portPos(e.to, e.tc, 'l');
+    const tc = TXCFG[e.type];
+    const dx = Math.max(60, (tp.x-fp.x)*0.45);
+
+    const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+    const isLong = Math.abs(e.to - e.from) > 1 || tblMap[e.to]?.level - tblMap[e.from]?.level > 1;
+    path.setAttribute('d',`M${fp.x},${fp.y} C${fp.x+dx},${fp.y} ${tp.x-dx},${tp.y} ${tp.x},${tp.y}`);
+    path.setAttribute('stroke', tc?.color || '#4b7096');
+    path.setAttribute('stroke-width', '1.5');
+    path.setAttribute('fill','none');
+    path.setAttribute('opacity','0.35');
+    path.setAttribute('stroke-dasharray', isLong ? '4,4' : 'none');
+    path.setAttribute('marker-end','url(#arr)');
+    path.id=`edge-${i}`;
+    path.dataset.ei=i;
+    path.classList.add('edge-path');
+
+    path.addEventListener('mouseenter', ev => showEdgeTip(e, i, ev));
+    path.addEventListener('mouseleave', () => hideTip());
+    path.addEventListener('click', () => showEdgeDetail(e, i));
+    path.style.pointerEvents='stroke';
+    path.style.cursor='pointer';
+
+    edgeGroup.appendChild(path);
+  });
+
+  document.getElementById('statEdges').textContent=`⇒ ${EDGES.filter(e=>e.from!==e.to).length} edges`;
+}
+
+// ═══════════════════════════════════════════════════════
+// RENDER: LEVEL LABELS
+// ═══════════════════════════════════════════════════════
+function buildLevelLabels(){
+  const canvas = document.getElementById('canvas');
+  const levels = ['SOURCE\nL0','STAGING\nL1','ENRICHMENT\nL2','INTEGRATION\nL3',
+    'AGGREGATION\nL4','SCORING\nL5','DECISION\nL6','COMPLIANCE\nL7','REPORTING\nL8','DATA MART\nL9'];
+  levels.forEach((lbl,i)=>{
+    const el = document.createElement('div');
+    el.className='lvl-label';
+    el.style.left=(i*LX+SX+TW/2-30)+'px';
+    el.style.width='60px';
+    el.textContent=lbl.split('\n')[0]+' · L'+i;
+    canvas.appendChild(el);
+    // vertical separator
+    if(i>0){
+      const ln = document.createElement('div');
+      ln.className='lvl-line';
+      ln.style.left=(i*LX+SX-LX/2)+'px';
+      canvas.appendChild(ln);
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// RENDER: LEGEND
+// ═══════════════════════════════════════════════════════
+function buildLegend(){
+  const container = document.getElementById('legItems');
+  const entries = [
+    {type:'line',color:TXCFG.passthrough.color,label:'Pass-thru'},
+    {type:'line',color:TXCFG.cast.color,label:'Cast/Convert'},
+    {type:'line',color:TXCFG.lookup.color,label:'Lookup'},
+    {type:'line',color:TXCFG.calculate.color,label:'Calculate'},
+    {type:'line',color:TXCFG.aggregate.color,label:'Aggregate'},
+    {type:'line',color:TXCFG.mask.color,label:'Mask/PII'},
+    {type:'line',color:TXCFG.decode.color,label:'Decode'},
+    {type:'line',color:TXCFG.expression.color,label:'Expression'},
+  ];
+  const row1 = entries.slice(0,4), row2 = entries.slice(4);
+  const wrap = document.createElement('div');
+  wrap.style.display='flex';wrap.style.gap='12px';
+  [row1,row2].forEach(grp=>{
+    const col=document.createElement('div');
+    col.style.display='flex';col.style.flexDirection='column';col.style.gap='3px';
+    grp.forEach(e=>{
+      const item=document.createElement('div');
+      item.className='leg-row';
+      item.innerHTML=`<div class="leg-line" style="background:${e.color}"></div>${e.label}`;
+      col.appendChild(item);
+    });
+    wrap.appendChild(col);
+  });
+  container.appendChild(wrap);
+}
+
+// ═══════════════════════════════════════════════════════
+// SELECTION / TRACE
+// ═══════════════════════════════════════════════════════
+let selectedTable = null, selectedCol = null, traceMode = true;
+
+function clearSelection(){
+  document.querySelectorAll('.t-node').forEach(n=>n.classList.remove('selected','highlighted','dimmed'));
+  document.querySelectorAll('.col-row').forEach(r=>r.classList.remove('col-hl','col-from-hl'));
+  document.querySelectorAll('.port').forEach(p=>p.classList.remove('p-active','p-src'));
+  document.querySelectorAll('.edge-path').forEach(p=>{p.classList.remove('e-dim','e-hl');p.setAttribute('opacity','0.35');});
+  document.querySelectorAll('.tbl-item').forEach(i=>i.classList.remove('active'));
+  selectedTable=null; selectedCol=null;
+  document.getElementById('statSelected').textContent='○ Nothing selected';
+}
+
+function selectTable(tid){
+  clearSelection();
+  selectedTable=tid;
+  const node=document.getElementById('node-'+tid);
+  if(node) node.classList.add('selected');
+  const t = tblMap[tid];
+  const lv = LAYER[t.type];
+  // dim others
+  if(traceMode){
+    const connected=new Set([tid]);
+    EDGES.forEach(e=>{ if(e.from===tid) connected.add(e.to); if(e.to===tid) connected.add(e.from); });
+    document.querySelectorAll('.t-node').forEach(n=>{
+      if(!connected.has(n.id.replace('node-',''))) n.classList.add('dimmed');
+    });
+    EDGES.forEach((e,i)=>{
+      const el=document.getElementById('edge-'+i);
+      if(!el) return;
+      if(e.from===tid||e.to===tid){ el.classList.add('e-hl'); el.setAttribute('opacity','0.9'); }
+      else { el.classList.add('e-dim'); el.setAttribute('opacity','0.06'); }
+    });
+  }
+  document.querySelectorAll(`[data-tid="${tid}"]`).forEach(i=>i.classList.add('active'));
+  document.getElementById('statSelected').textContent=`⊡ ${t.label}`;
+  showTableDetail(tid);
+}
+
+function selectColumn(tid, ci){
+  clearSelection();
+  selectedTable=tid; selectedCol=ci;
+  if(!traceMode){ return; }
+  const {reachTables, reachCols, reachEdges} = traceAll(tid, ci);
+  // highlight reached, dim others
+  document.querySelectorAll('.t-node').forEach(n=>{
+    const ntid=n.id.replace('node-','');
+    if(reachTables.has(ntid)) n.classList.add('highlighted');
+    else n.classList.add('dimmed');
+  });
+  reachCols.forEach(key=>{
+    const [kt,kc]=key.split('|');
+    const el=document.getElementById(`col-${kt}-${kc}`);
+    if(el) el.classList.add(kt===tid&&kc==ci?'col-from-hl':'col-hl');
+    const pr=document.getElementById(`pr-${kt}-${kc}`);
+    const pl=document.getElementById(`pl-${kt}-${kc}`);
+    if(pr) pr.classList.add(kt===tid&&kc==ci?'p-src':'p-active');
+    if(pl) pl.classList.add(kt===tid&&kc==ci?'p-src':'p-active');
+  });
+  EDGES.forEach((e,i)=>{
+    const el=document.getElementById('edge-'+i); if(!el) return;
+    if(reachEdges.has(i)){ el.classList.add('e-hl'); el.setAttribute('opacity','1'); el.setAttribute('stroke-width','2.5'); }
+    else { el.classList.add('e-dim'); el.setAttribute('opacity','0.04'); }
+  });
+  const t=tblMap[tid];
+  const colName=t.cols[ci]?.n||'?';
+  document.getElementById('statSelected').textContent=`⇒ Tracing ${t.label}.${colName}`;
+  showColumnDetail(tid, ci, reachEdges);
+}
+
+// ═══════════════════════════════════════════════════════
+// DETAIL PANEL
+// ═══════════════════════════════════════════════════════
+function openPanel(title, html){
+  document.getElementById('detTitle').textContent=title;
+  document.getElementById('detBody').innerHTML=html;
+  document.getElementById('rightPanel').classList.add('open');
+}
+function closePanel(){
+  document.getElementById('rightPanel').classList.remove('open');
+}
+
+function showTableDetail(tid){
+  const t=tblMap[tid]; const lv=LAYER[t.type];
+  const inEdges=EDGES.filter(e=>e.to===tid&&e.from!==e.to);
+  const outEdges=EDGES.filter(e=>e.from===tid&&e.from!==e.to);
+  openPanel(t.label,`
+    <div class="det-sec">
+      <div class="det-lbl">Layer</div>
+      <div class="det-val"><span class="tx-badge" style="background:${lv.bg};color:${lv.color}">${lv.icon} ${lv.label} · Level ${t.level}</span></div>
+    </div>
+    <div class="det-sec">
+      <div class="det-lbl">Columns (${t.cols.length})</div>
+      <div class="det-val">${t.cols.map(c=>`<div class="col-chip" style="margin-bottom:2px"><span style="color:${c.derived?'#f59e0b':'var(--text-dim)'}">${c.derived?'ƒ ':'⬡ '}</span>${c.n} <span style="color:var(--text-dim)">${c.dt}</span></div>`).join('')}</div>
+    </div>
+    <div class="det-sec">
+      <div class="det-lbl">Incoming (${inEdges.length})</div>
+      <div class="det-val">${inEdges.slice(0,5).map(e=>`<div class="col-chip" style="margin-bottom:2px;border-left:2px solid ${TXCFG[e.type]?.color||'#4b7096'}">${e.from}.${tblMap[e.from]?.cols[e.fc]?.n||'?'}</div>`).join('')}${inEdges.length>5?`<div style="color:var(--text-dim);font-size:9px;margin-top:3px">+${inEdges.length-5} more</div>`:''}</div>
+    </div>
+    <div class="det-sec">
+      <div class="det-lbl">Outgoing (${outEdges.length})</div>
+      <div class="det-val">${outEdges.slice(0,5).map(e=>`<div class="col-chip" style="margin-bottom:2px;border-left:2px solid ${TXCFG[e.type]?.color||'#4b7096'}">${e.to}.${tblMap[e.to]?.cols[e.tc]?.n||'?'}</div>`).join('')}${outEdges.length>5?`<div style="color:var(--text-dim);font-size:9px;margin-top:3px">+${outEdges.length-5} more</div>`:''}</div>
+    </div>
+  `);
+}
+
+function showColumnDetail(tid, ci, reachEdges){
+  const t=tblMap[tid]; const col=t.cols[ci];
+  const lv=LAYER[t.type];
+  const relEdges=EDGES.filter((e,i)=>reachEdges.has(i));
+  openPanel(col.n,`
+    <div class="det-sec">
+      <div class="det-lbl">Column</div>
+      <div class="det-val"><span style="color:var(--text-bright);font-weight:600">${col.n}</span></div>
+      <div class="det-val" style="color:var(--text-dim);margin-top:2px">${col.dt}${col.derived?' · Derived':''}
+      </div>
+    </div>
+    <div class="det-sec">
+      <div class="det-lbl">Source Table</div>
+      <div class="det-val"><span class="tx-badge" style="background:${lv.bg};color:${lv.color}">${lv.icon} ${t.label}</span></div>
+    </div>
+    <div class="det-sec">
+      <div class="det-lbl">Lineage Path (${reachEdges.size} edges)</div>
+      <div class="det-val">${relEdges.slice(0,8).map(e=>{
+        const tc=TXCFG[e.type];
+        const fn=tblMap[e.from]?.cols[e.fc]?.n||'?';
+        const tn=tblMap[e.to]?.cols[e.tc]?.n||'?';
+        return `<div style="margin-bottom:6px">
+          <div class="col-chip">${e.from}<span style="color:var(--text-dim)">.${fn}</span></div>
+          <div class="arrow-chip">↓ <span class="tx-badge" style="background:${tc.color}22;color:${tc.color}">${tc.symbol} ${tc.label}</span></div>
+          <div class="col-chip">${e.to}<span style="color:var(--text-dim)">.${tn}</span></div>
+        </div>`;
+      }).join('')}${reachEdges.size>8?`<div style="color:var(--text-dim);font-size:9px">+${reachEdges.size-8} more edges in path</div>`:''}</div>
+    </div>
+  `);
+}
+
+function showEdgeDetail(e, i){
+  const tc=TXCFG[e.type];
+  const ft=tblMap[e.from]; const tt=tblMap[e.to];
+  const fc=ft?.cols[e.fc]; const tc2=tt?.cols[e.tc];
+  openPanel('Edge Detail',`
+    <div class="det-sec">
+      <div class="det-lbl">Transformation</div>
+      <div class="det-val"><span class="tx-badge" style="background:${tc.color}22;color:${tc.color}">${tc.symbol} ${tc.label}</span></div>
+    </div>
+    <div class="det-sec">
+      <div class="det-lbl">Source</div>
+      <div class="det-val"><span style="color:${LAYER[ft?.type]?.color}">${ft?.label}</span>.${fc?.n}</div>
+      <div class="det-val" style="color:var(--text-dim);margin-top:2px">${fc?.dt}</div>
+    </div>
+    <div class="det-sec">
+      <div class="det-lbl">Target</div>
+      <div class="det-val"><span style="color:${LAYER[tt?.type]?.color}">${tt?.label}</span>.${tc2?.n}</div>
+      <div class="det-val" style="color:var(--text-dim);margin-top:2px">${tc2?.dt}</div>
+    </div>
+    <div class="det-sec">
+      <div class="det-lbl">Expression / Logic</div>
+      <div class="tx-code">${e.tx}</div>
+    </div>
+  `);
+}
+
+// ═══════════════════════════════════════════════════════
+// TOOLTIP
+// ═══════════════════════════════════════════════════════
+const tip = document.getElementById('tooltip');
+function showEdgeTip(e, i, ev){
+  const tc=TXCFG[e.type];
+  const fn=tblMap[e.from]?.cols[e.fc]?.n||'?';
+  const tn=tblMap[e.to]?.cols[e.tc]?.n||'?';
+  tip.innerHTML=`<span style="color:${tc.color}">${tc.symbol} ${tc.label}</span>&nbsp;·&nbsp;${e.from}<b style="color:var(--text-bright)">.${fn}</b> → ${e.to}<b style="color:var(--text-bright)">.${tn}</b><br><span style="color:var(--text-dim);font-size:9px">${e.tx.slice(0,60)}${e.tx.length>60?'…':''}</span>`;
+  tip.classList.add('show');
+  moveTip(ev);
+}
+function moveTip(ev){ tip.style.left=(ev.clientX+12)+'px'; tip.style.top=(ev.clientY-8)+'px'; }
+function hideTip(){ tip.classList.remove('show'); }
+document.addEventListener('mousemove',ev=>{ if(tip.classList.contains('show')) moveTip(ev); });
+
+// ═══════════════════════════════════════════════════════
+// PAN & ZOOM
+// ═══════════════════════════════════════════════════════
+let scale=0.62, panX=0, panY=0, dragging=false, dragSX=0, dragSY=0, dragPX=0, dragPY=0;
+const canvasArea=document.getElementById('canvasArea');
+const canvas=document.getElementById('canvas');
+
+function applyTransform(){
+  canvas.style.transform=`translate(${panX}px,${panY}px) scale(${scale})`;
+  document.getElementById('zoomPct').textContent=Math.round(scale*100)+'%';
+  updateMinimap();
+}
+
+canvasArea.addEventListener('mousedown',e=>{
+  if(e.target.closest('.t-node')||e.target.closest('.minimap')||e.target.closest('.legend')) return;
+  dragging=true; dragSX=e.clientX; dragSY=e.clientY; dragPX=panX; dragPY=panY;
+  canvasArea.classList.add('grabbing');
+});
+window.addEventListener('mousemove',e=>{ if(!dragging) return; panX=dragPX+(e.clientX-dragSX); panY=dragPY+(e.clientY-dragSY); applyTransform(); });
+window.addEventListener('mouseup',()=>{ dragging=false; canvasArea.classList.remove('grabbing'); });
+
+canvasArea.addEventListener('wheel',e=>{
+  e.preventDefault();
+  const rect=canvasArea.getBoundingClientRect();
+  const mx=e.clientX-rect.left, my=e.clientY-rect.top;
+  const factor=e.deltaY<0?1.1:0.91;
+  const ns=Math.max(0.15,Math.min(2.5,scale*factor));
+  panX=mx-(mx-panX)*(ns/scale);
+  panY=my-(my-panY)*(ns/scale);
+  scale=ns; applyTransform();
+},{passive:false});
+
+document.getElementById('btnZoomIn').addEventListener('click',()=>{ scale=Math.min(2.5,scale*1.15); applyTransform(); });
+document.getElementById('btnZoomOut').addEventListener('click',()=>{ scale=Math.max(0.15,scale*0.87); applyTransform(); });
+
+document.getElementById('btnFit').addEventListener('click',()=>{
+  const rect=canvasArea.getBoundingClientRect();
+  const cw=rect.width-(document.getElementById('leftPanel').offsetWidth||0)-(document.getElementById('rightPanel').offsetWidth||0);
+  const ch=rect.height;
+  const contentW=9*LX+TW+SX*2, contentH=750;
+  scale=Math.min(cw/contentW, ch/contentH)*0.9;
+  panX=(cw-contentW*scale)/2;
+  panY=(ch-contentH*scale)/2;
+  applyTransform();
+});
+
+function panToTable(tid){
+  const t=tblMap[tid];
+  const rect=canvasArea.getBoundingClientRect();
+  panX=rect.width/2-t.x*scale-TW*scale/2;
+  panY=rect.height/2-t.y*scale-nodeH(t)*scale/2;
+  applyTransform();
+}
+
+// ═══════════════════════════════════════════════════════
+// MINIMAP
+// ═══════════════════════════════════════════════════════
+function updateMinimap(){
+  const mmC=document.getElementById('mmCanvas');
+  const mmEl=document.getElementById('minimap');
+  const dpr=window.devicePixelRatio||1;
+  mmC.width=mmEl.offsetWidth*dpr; mmC.height=mmEl.offsetHeight*dpr;
+  const ctx=mmC.getContext('2d');
+  ctx.scale(dpr,dpr);
+  const mw=mmEl.offsetWidth, mh=mmEl.offsetHeight;
+  const fullW=5400, fullH=1900;
+  const sx=mw/fullW, sy=mh/fullH;
+  ctx.clearRect(0,0,mw,mh);
+  // draw table rects
+  TABLES.forEach(t=>{
+    const lv=LAYER[t.type];
+    ctx.fillStyle=lv.color+'40';
+    ctx.strokeStyle=lv.color+'80';
+    ctx.lineWidth=0.5;
+    const rx=t.x*sx,ry=t.y*sy,rw=TW*sx,rh=nodeH(t)*sy;
+    ctx.fillRect(rx,ry,rw,rh);
+    ctx.strokeRect(rx,ry,rw,rh);
+  });
+  // draw viewport indicator
+  const rect=canvasArea.getBoundingClientRect();
+  const vx=-panX/scale*sx, vy=-panY/scale*sy;
+  const vw=rect.width/scale*sx, vh=rect.height/scale*sy;
+  const vp=document.getElementById('mmViewport');
+  vp.style.left=Math.max(0,vx)+'px'; vp.style.top=Math.max(0,vy)+'px';
+  vp.style.width=Math.min(mw,vw)+'px'; vp.style.height=Math.min(mh,vh)+'px';
+}
+
+// ═══════════════════════════════════════════════════════
+// SEARCH
+// ═══════════════════════════════════════════════════════
+document.getElementById('searchInput').addEventListener('input', function(){
+  const q=this.value.toLowerCase().trim();
+  if(!q){ document.querySelectorAll('.t-node').forEach(n=>n.classList.remove('srch-match','srch-no')); return; }
+  TABLES.forEach(t=>{
+    const node=document.getElementById('node-'+t.id);
+    if(!node) return;
+    const match=t.label.toLowerCase().includes(q)||t.cols.some(c=>c.n.toLowerCase().includes(q));
+    node.classList.toggle('srch-match',match);
+    node.classList.toggle('srch-no',!match);
+  });
+});
+
+// ═══════════════════════════════════════════════════════
+// CONTROLS
+// ═══════════════════════════════════════════════════════
+document.getElementById('btnPanels').addEventListener('click',function(){
+  const lp=document.getElementById('leftPanel');
+  lp.classList.toggle('collapsed');
+  this.classList.toggle('active',!lp.classList.contains('collapsed'));
+});
+
+document.getElementById('btnTrace').addEventListener('click',function(){
+  traceMode=!traceMode;
+  this.classList.toggle('active',traceMode);
+  this.textContent=traceMode?'⟵ Trace Path':'○ Select Only';
+});
+
+document.getElementById('btnReset').addEventListener('click',()=>{ clearSelection(); closePanel(); document.getElementById('searchInput').value=''; document.querySelectorAll('.t-node').forEach(n=>n.classList.remove('srch-match','srch-no')); });
+document.getElementById('detClose').addEventListener('click',()=>{ clearSelection(); closePanel(); });
+
+canvasArea.addEventListener('click',e=>{
+  if(!e.target.closest('.t-node')&&!e.target.closest('.right-panel')&&!e.target.closest('.minimap')&&!e.target.closest('.legend')){
+    clearSelection(); closePanel();
+  }
+});
+
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
+buildLeftPanel();
+buildNodes();
+buildEdges();
+buildLevelLabels();
+buildLegend();
+
+// Initial pan: center content
+window.addEventListener('load',()=>{
+  const rect=canvasArea.getBoundingClientRect();
+  const lp=document.getElementById('leftPanel');
+  const cw=rect.width-(lp.offsetWidth||0);
+  const contentW=9*LX+TW+SX*2;
+  scale=Math.min(cw/contentW*0.88, 0.72);
+  panX=(lp.offsetWidth||0)+((cw-contentW*scale)/2);
+  panY=40;
+  applyTransform();
+  updateMinimap();
+});
+
+setInterval(updateMinimap, 400);
+document.getElementById('statTables').textContent=`⊡ ${TABLES.length} tables`;
+</script>
+</body>
+</html>
