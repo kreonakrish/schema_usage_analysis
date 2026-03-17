@@ -1,0 +1,41 @@
+I have two Excel files that track AWS Glue data consumption across our enterprise.
+Help me understand the structure before I ask you to build anything.
+
+FILE 1: aws_glue_usage_analysis.xlsx
+Sheets:
+  - "Usage Details" (800 rows): one row per FID/SID/table/column access event.
+    Columns: Record ID, Schema Name, Table Name, Column Name, FID, SID,
+    AWS Role (full ARN), C2C Role, SEAL ID (FID), SEAL ID (SID), SEAL ID (Role),
+    Access Type, Environment, Data Classification, Access Frequency,
+    Last Accessed Date, First Accessed Date, Record Count (M),
+    Read Count (K), Write Count (K), Region, Account ID, Pipeline Name.
+
+  - "Schema Summary" (10 rows): one row per Glue database/schema.
+    Columns: Schema Name, Table Count, Column Count (K), Unique FIDs,
+    Unique SIDs, Unique SEAL IDs, Distinct AWS Roles,
+    Most Used Access Type, Data Classification, Total Read Count (K).
+
+  - "Role Mapping" (50 rows): AWS Role to C2C Role to SEAL ID mappings.
+    Columns: AWS Role, C2C Role, SEAL ID, Access Scope, Owning LOB,
+    Environment, Approved By, Approval Date.
+
+FILE 2: seal_extract.xlsx
+Sheets:
+  - "SEAL Master" (200 rows): one row per registered application.
+    Columns: SEAL ID, Application Name, Application Short Name,
+    Reporting LOB, Consuming LOB 1, Consuming LOB 2, Consuming LOB 3,
+    Application Owner, Tech Owner Email, Business Owner, App Tier,
+    Criticality, Region, Hosting Environment, Data Domain,
+    Onboarded Date, Last Review Date, Active Status,
+    Decommission Date, Notes.
+
+  - "LOB Summary" (15 rows): aggregated stats per Line of Business.
+  - "Domain Mapping" (100 rows): SEAL ID to Glue database/table linkage.
+
+Key relationships:
+  - A FID or SID in the usage file maps to a SEAL ID (one FID/SID = one app).
+  - SEAL ID is the primary key that links aws_glue_usage_analysis to seal_extract.
+  - One SEAL app can appear in many usage rows (it accesses many tables).
+  - One table can be accessed by many SEAL apps (many-to-many).
+
+Confirm you understand the schema and the FID→SEAL→App linkage before proceeding.
