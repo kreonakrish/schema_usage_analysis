@@ -1,0 +1,71 @@
+Now complete the JavaScript for the dashboard. The data is already loaded from
+glue_data.json into these variables:
+  DATA.schemas, DATA.tables, DATA.apps, DATA.usage
+
+Implement the following functions:
+
+STATE MANAGEMENT
+  let state = {
+    domain: null,     // selected schema id, or null for all
+    app: null,        // selected SEAL ID, or null
+    table: null,      // selected table id for detail drawer
+    envs: new Set(),  // active env filters
+    classes: new Set(),
+    search: '',
+    sort: 'reads'     // 'reads'|'name'|'cols'|'apps'
+  }
+
+getFilteredTables()
+  - Filter DATA.tables by state.domain, state.app (only tables in that app),
+    state.envs, state.classes, state.search (check table name, schema,
+    consumer app names via lookup, SEAL IDs)
+  - Sort by state.sort
+  - Return filtered + sorted array
+
+renderTables(tables)
+  - Build table cards HTML and inject into #tableList
+  - Update #center-count badge
+  - Limit render to first 200, show "…and N more" message if truncated
+  - Dim cards that don't match selectedApp if one is active
+
+renderRightPanel(tables)
+  - Aggregates: count unique apps, FIDs, SIDs, AWS roles, total reads
+    across all usage records where tableId is in the visible tables set
+  - LOBs: count apps per LOB from relevant apps, render sorted bars
+  - Apps: list all apps that have at least 1 table in visible set,
+    sorted by visible table count desc; clicking an app sets state.app
+    and re-renders (acts as a filter)
+  - FIDs: count usage records per FID for visible tables, show top 30
+  - SIDs: same for SIDs
+
+selectTable(id)
+  - Set state.table, highlight card, open detail drawer
+  - Populate drawer KPI grid and identity rows from DATA.usage
+  - Clicking the same table again closes the drawer
+
+selectDomain(id)
+  - Set state.domain, clear state.app and state.table
+  - Update domain tile active states (gold left border on active)
+  - Re-render everything
+
+selectApp(id)
+  - Toggle: if already selected, deselect
+  - Set state.app, re-render; tables not in this app become dimmed
+
+buildMiniChart()
+  - Small horizontal bar chart in left panel
+  - One bar per schema, length = table count, coloured per schema colour
+  - Rendered with Chart.js, height 130px
+
+updateBreadcrumb()
+  - "All Domains" (clickable → clearAll) / [Domain label] / App: [App Name]
+
+updateKpiBanner()
+  - Update the 6 KPI pills in the stats bar based on current visible tables
+
+applyFilters() — master function that calls all of the above in order
+
+Make all interactions feel instant (synchronous DOM updates, no loading spinners).
+Ensure the right panel updates every single time any filter changes.
+The dashboard should work completely offline once glue_data.json is in the
+same folder as the HTML file.
