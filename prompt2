@@ -1,0 +1,80 @@
+Now write a Python script using pandas and openpyxl to:
+
+1. Read aws_glue_usage_analysis.xlsx ("Usage Details" and "Schema Summary" sheets)
+2. Read seal_extract.xlsx ("SEAL Master" and "Domain Mapping" sheets)
+3. Produce a single JSON file called glue_data.json with this structure:
+
+{
+  "schemas": [
+    {
+      "id": "schema_risk",          // from Schema Name, lowercased, spaces→underscore
+      "label": "Risk",              // human label
+      "tableCount": 142,
+      "colsK": 87.3,
+      "uniqueFids": 12,
+      "uniqueSids": 9,
+      "uniqueSeals": 34,
+      "awsRoles": 5,
+      "totalReadK": 24800,
+      "topClassification": "CONFIDENTIAL"
+    }
+  ],
+  "tables": [
+    {
+      "id": "schema_risk_transactions_01",   // unique key: schema+name+index
+      "schema": "schema_risk",
+      "name": "schema_risk_transactions",
+      "colsK": 45.2,
+      "readK": 3400,
+      "writeK": 120,
+      "env": "PROD",
+      "classif": "RESTRICTED",
+      "freq": "DAILY",
+      "lastAccess": "2025-11-14",
+      "consumers": ["SL-10003", "SL-10042"]   // SEAL IDs from usage file
+    }
+  ],
+  "apps": [
+    {
+      "id": "SL-10000",
+      "appName": "Risk Analytics Engine",
+      "repLob": "Risk & Compliance",
+      "conLob1": "Technology",
+      "conLob2": "Audit & Control",
+      "tier": "Tier 1",
+      "criticality": "Critical",
+      "region": "North America",
+      "hosting": "AWS-PROD",
+      "domain": "Risk",
+      "status": "Active",
+      "onboard": "2022-03-15",
+      "tables": ["schema_risk_transactions_01", "schema_trading_positions_02"]
+    }
+  ],
+  "usage": [
+    {
+      "appId": "SL-10000",
+      "tableId": "schema_risk_transactions_01",
+      "fid": "svc-abcd10",
+      "sid": "sys-ABC100",
+      "sealFid": "SL-10015",
+      "sealSid": "SL-10033",
+      "awsRole": "GlueReadOnly-Prod",
+      "c2cRole": "c2c-glue-consumer-prod",
+      "access": "SELECT",
+      "env": "PROD",
+      "readK": 1200,
+      "lastAccess": "2025-12-01"
+    }
+  ]
+}
+
+Rules:
+- Build the "tables[].consumers" array by finding all SEAL IDs in "Usage Details"
+  that access that table (join on Schema Name + Table Name).
+- Build "apps[].tables" from the same join, reversed.
+- Shorten AWS Role ARNs to just the role name after the last slash.
+- Deduplicate: if the same FID accesses the same table multiple times, keep
+  one usage record per (appId, tableId) pair, summing readK and writeK.
+- Output glue_data.json to the same folder as the Excel files.
+- Print a summary: schema count, table count, app count, usage record count.
