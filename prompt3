@@ -1,0 +1,63 @@
+Now build a single-file static HTML dashboard called aws_glue_adoption_dashboard.html
+that loads glue_data.json via fetch() on startup. No build tools, no frameworks —
+pure HTML + CSS + vanilla JS + Chart.js from CDN.
+
+LAYOUT — 3-panel full-viewport design:
+
+┌──────────────────────────────────────────────────────────┐
+│  HEADER: JP Morgan Chase branding, title, live badge     │
+├──────────────────────────────────────────────────────────┤
+│  STATS BAR: KPI pills + global search input + env/class  │
+│             filter chips                                 │
+├──────────────────────────────────────────────────────────┤
+│ BREADCRUMB: "All Domains / [domain] / App: [name]"       │
+├──────────────┬───────────────────────────┬───────────────┤
+│ LEFT         │ CENTER                    │ RIGHT         │
+│ 230px        │ flex-1                    │ 300px         │
+│              │                           │               │
+│ Domain tiles │ Toolbar (sort, filter,    │ Aggregates    │
+│ (clickable)  │   count badge)            │ KPI grid      │
+│              │                           │               │
+│ "All" tile   │ Scrollable table cards    │ LOBs list     │
+│ Risk tile    │ (one card per Glue table) │               │
+│ Trading tile │                           │ SEAL Apps     │
+│ ...          │ Detail drawer (slide up   │ (clickable,   │
+│              │ on table click showing    │  filters      │
+│ Mini bar     │ FID/SID/SEAL/Role/LOB     │  center)      │
+│ chart        │ for every consumer)       │               │
+│              │                           │ FIDs list     │
+│              │                           │ SIDs list     │
+└──────────────┴───────────────────────────┴───────────────┘
+
+COLOUR SCHEME — JP Morgan Chase palette:
+  --navy: #003087    (primary, headers, active states)
+  --gold: #c8a951    (accent, active chip, border highlights)
+  --bg:   #f0f3f8    (page background)
+  --card: #ffffff
+  --green: #16a34a, --amber: #d97706, --red: #dc2626
+
+Each domain tile must show:
+  - emoji icon + domain label
+  - "X tables · YM reads" subtitle
+  - A thin coloured progress bar showing relative read volume
+  - Click → filters entire view to that domain
+
+Each table card must show:
+  - Schema badge (coloured per schema) + table name in monospace
+  - Classification badge (RESTRICTED=red, CONFIDENTIAL=amber,
+    INTERNAL=blue, PUBLIC=green) + Environment badge
+  - Row 2: Cols, Reads, Writes, Frequency, Last Access
+  - Right side: mini read-volume bar + "N apps" count
+  - Click → opens detail drawer at bottom of center panel
+
+Detail drawer must show:
+  - Row of KPI boxes: schema, columns, reads, writes, env, class, unique apps/FIDs/SIDs/roles
+  - One row per consumer showing: SEAL ID, FID, SID, SEAL(FID), SEAL(SID), AWS Role, C2C Role, access type, LOB
+
+Global search must filter across: table name, schema, app name, SEAL ID, FID.
+Env and classification chips must be multi-select toggle filters.
+All filters must be AND-combined and update the view in real time.
+
+Write only the HTML/CSS/JS shell with placeholder fetch logic.
+The JS data model should expect the glue_data.json structure defined earlier.
+Use Chart.js 4.4.1 from cdnjs.cloudflare.com.
