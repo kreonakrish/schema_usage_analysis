@@ -1,0 +1,25 @@
+I have two Excel files:
+
+1. aws_glue_usage_analysis.xlsx — tracks which FIDs, SIDs, AWS Roles 
+   and C2C Roles access AWS Glue tables/schemas. Each row has a SEAL ID 
+   that maps the FID/SID to an owning application.
+
+2. seal_extract.xlsx — master list of 200 applications (SEAL IDs) with 
+   their Reporting LOB, Consuming LOBs, app owner, tier, and criticality.
+
+Build me a single static HTML file that shows AWS Glue adoption across 
+our enterprise. No frameworks, no backend — everything inline.
+
+Layout: 3 panels side by side.
+- Left: clickable domain/schema tiles that filter everything
+- Center: scrollable list of Glue tables with read volume, classification 
+  badge, environment badge, column count, consumer app count. 
+  Clicking a table slides up a drawer showing every FID, SID, SEAL ID, 
+  AWS Role, C2C Role and LOB consuming it.
+- Right: live aggregates (unique FIDs, SIDs, apps, read volume), 
+  LOB breakdown, SEAL app list (clicking an app filters the center), 
+  FID list, SID list.
+
+Top bar: global search + ENV filter chips + Classification filter chips.
+JP Morgan Chase branding — navy (#003087) and gold (#c8a951).
+Generate realistic sample data inline in JS (no external files needed).
